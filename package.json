@@ -1,0 +1,20 @@
+{
+  "name": "email-listner",
+  "version": "1.0.0",
+  "description": "This project is for listening email and sending to an api, then response back to same thread.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "abhishek",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "form-data": "^4.0.1",
+    "imap": "^0.8.19",
+    "mailparser": "^3.7.2",
+    "nodemailer": "^6.9.16",
+    "simple-parser": "^0.0.0"
+  }
+}
