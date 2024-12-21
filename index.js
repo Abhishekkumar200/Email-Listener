@@ -163,9 +163,26 @@ async function processQueue() {
   isProcessing = false;
 }
 
+//Function to process date and return yesterday date in proper format.
+function returnYesterdayDate()
+{
+  const today = new Date();
+  today.setDate(today.getDate() - 1)
+
+  const formatDate = (date) => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = date.toLocaleString("en-US", { month: "short" }); // IMAP expects abbreviated month names
+    const year = date.getFullYear();
+    return `${month} ${day}, ${year}`;
+  };
+
+  return yesterdayDate = formatDate(today);
+}
+
 // Function to fetch and process unseen emails
 function fetchUnseenEmails() {
-  imap.search(["UNSEEN"], (err, results) => {
+  const yesterday = returnYesterdayDate();
+  imap.search(["UNSEEN", ["SINCE", yesterday] ], (err, results) => {
     if (err) {
       console.error("Error searching for emails:", err.message);
       return;
@@ -191,9 +208,10 @@ function fetchUnseenEmails() {
   });
 }
 
-// Function to initialize processedUIDs with previous unread emails
-function initializeProcessedUIDs(callback) {
-  imap.search(["UNSEEN"], (err, results) => {
+// Function to initialize processed UIDs with unseen emails from today and yesterday
+function initializeProcessedUIDs(callback) { 
+  const yesterday = returnYesterdayDate();
+  imap.search(["UNSEEN", ["SINCE", yesterday]], (err, results) => {
     if (err) {
       console.error("Error initializing processed UIDs:", err.message);
       callback(err);
@@ -201,7 +219,7 @@ function initializeProcessedUIDs(callback) {
     }
 
     processedUIDs = results || [];
-    console.log("Initialized processed UIDs with previous unseen emails.");
+    console.log("Initialized processed UIDs with unseen emails from today and yesterday.");
     callback(null);
   });
 }
