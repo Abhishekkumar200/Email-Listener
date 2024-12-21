@@ -12,5 +12,5 @@ EMAIL_USER=abc@gmail.com
 EMAIL_PASS=inkbzctjddwmqdtq
 API_ENDPOINT=http://127.0.0.1:8080
 ```
-Put your email id that you want to listen to the variable `EMAIL_USER` and app password as `EMAIL_PASS`. `EMAIL_PASS` is not your actual email password but it is app password
+Put your email id that you want to listen to the variable `EMAIL_USER` and app password as `EMAIL_PASS`. `EMAIL_PASS` is not your actual email password but it is app password ( You can use the [link](https://knowledge.workspace.google.com/kb/how-to-create-app-passwords-000009237) to create one.), remove any space between them.
 
