@@ -27,10 +27,12 @@ function processEmail(emailBody) {
   return mainContent;
 }
 
-// Function to send email data with attachments
+
 async function sendEmailDataWithAttachments(email, attachments) {
   const emailBody = await processEmail(email.text);
+
   try {
+    // Prepare form-data to send to the API
     const formData = new FormData();
     const emailData = {
       subject: email.subject || "No Subject",
@@ -39,7 +41,9 @@ async function sendEmailDataWithAttachments(email, attachments) {
       time: email.date || new Date(),
       body: emailBody || "No Body",
     };
+
     formData.append("emailData", JSON.stringify(emailData));
+
     for (const attachment of attachments) {
       formData.append(
         "attachments",
@@ -48,32 +52,42 @@ async function sendEmailDataWithAttachments(email, attachments) {
       );
     }
 
-    const response = await axios.post(process.env.API_ENDPOINT, formData, {
-      headers: formData.getHeaders(),
+    // Make the API request
+    const response = await axios({
+      method: "post",
+      url: process.env.API_ENDPOINT,
+      headers: {
+        ...formData.getHeaders(),
+        "Content-Type": `multipart/form-data; boundary=${formData._boundary}`,
+      },
+      data: formData,
     });
 
+    // Parse response data
     const responseData = response.data;
-    console.log("API Response:", responseData);
-    const replyMessage = responseData.data;
-    await sendReply(email, replyMessage);
+    const replyMessage = responseData.data.message || "No reply message";
+
+    // Decode attachments
+    const responseAttachments = responseData.attachments.map((attachment) => ({
+      filename: attachment.filename,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      content: Buffer.from(attachment.content, "base64"), // Decode Base64 to binary Buffer
+    }));
+
+    console.log("Reply Message:", replyMessage);
+    console.log("Response Attachments:", responseAttachments);
+
+    // Send reply email with the received attachments
+    await sendReply(email, replyMessage, responseAttachments);
   } catch (error) {
     console.error("Error sending email data with attachments:", error.message);
   }
 }
 
-// Function to handle new emails
-async function handleNewEmail(email) {
-  try {
-    console.log("Processing email:", email.subject || "No Subject");
-    const attachments = email.attachments || [];
-    await sendEmailDataWithAttachments(email, attachments);
-  } catch (error) {
-    console.error("Error handling email:", error.message);
-  }
-}
 
 // Function to send a reply email
-async function sendReply(originalEmail, replyMessage) {
+async function sendReply(originalEmail, replyMessage, responseAttachments = []) {
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,
@@ -84,30 +98,46 @@ async function sendReply(originalEmail, replyMessage) {
     },
   });
 
-  // Ensure a consistent subject for emails without a subject
   const subject = originalEmail.subject
     ? `Re: ${originalEmail.subject}`
     : "Re: (no subject)";
+  const references = originalEmail.references || originalEmail.messageId;
 
-  // Handle undefined references by creating a proper chain
-  const references = originalEmail.references
-    ? originalEmail.references
-    : originalEmail.messageId; // Use messageId as the start of the chain if references is missing
+  // Map the API response attachments to Nodemailer format
+  const mailAttachments = responseAttachments.map((attachment) => ({
+    filename: attachment.filename,
+    content: attachment.content,
+    contentType: attachment.mimeType,
+  }));
+
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: originalEmail.from.value[0].address,
-    subject: subject,
+    subject,
     text: replyMessage,
-    inReplyTo: originalEmail.messageId, // Explicitly link to the original message
-    references: references, // Ensure references are always included
+    inReplyTo: originalEmail.messageId,
+    references,
+    attachments: mailAttachments,
   };
 
   try {
     await transporter.sendMail(mailOptions);
     console.log("Reply sent successfully!");
   } catch (error) {
-    console.error("Error sending reply email:", error.message);
+    console.error("Error sending reply to email: ", error.message);
+  }
+}
+
+
+// Function to handle new emails
+async function handleNewEmail(email) {
+  try {
+    console.log("Processing email:", email.subject || "No Subject");
+    const attachments = email.attachments || [];
+    await sendEmailDataWithAttachments(email, attachments);
+  } catch (error) {
+    console.error("Error handling email:", error.message);
   }
 }
 
